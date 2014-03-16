@@ -1,0 +1,66 @@
+<html>
+<head>
+</head>
+<body>
+<template>
+  <p>Hello, world!</p>
+</template>
+
+<article></article>
+
+<script>
+(function(){
+  var each = Array.prototype.forEach;
+
+  window.addEventListener('DOMContentLoaded', function(){
+    var template = document.querySelector('template');
+    document.querySelector('article').appendChild(template.content.cloneNode(true));
+  });
+
+  function hasTemplateElement(){
+    return typeof HTMLTemplateElement != 'undefined';
+  };
+
+  function hasContent(){
+    var template = document.createElement('template');
+    return 'content' in template;
+  };
+
+  if(!hasContent()) {
+    var style = document.createElement('style');
+    style.textContent = 'template { display: none; }';
+    document.head.appendChild(style);
+
+    HTMLTemplateElement = function(){
+      throw new TypeError('Illegal constructor');
+    };
+
+    HTMLTemplateElement.prototype = Object.create(HTMLElement.prototype);
+
+    // Create inert document to host template's document fragments
+    HTMLTemplateElement.prototype._templateHostDocument = document.implementation.createHTMLDocument();
+
+    HTMLTemplateElement.prototype._createContentFragment = function(){
+      this._contentFragment = this._templateHostDocument.createDocumentFragment();
+      while(this.firstChild) {
+        this._contentFragment.appendChild(this.removeChild(this.firstChild));
+      }
+    };
+
+    Object.defineProperty(HTMLTemplateElement.prototype, 'content', {
+      get: function(){
+        if(!this._contentFragment) {
+          this._createContentFragment();
+        };
+        return this._contentFragment;
+      }
+    });
+
+    each.call(document.querySelectorAll('template'), function(template){
+      template.__proto__ = HTMLTemplateElement.prototype;
+    });
+  }
+})();
+</script>
+</body>
+</html>
