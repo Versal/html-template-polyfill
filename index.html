@@ -6,16 +6,12 @@
   <p>Hello, world!</p>
 </template>
 
-<article></article>
+<article>
+</article>
 
 <script>
 (function(){
   var each = Array.prototype.forEach;
-
-  window.addEventListener('DOMContentLoaded', function(){
-    var template = document.querySelector('template');
-    document.querySelector('article').appendChild(template.content.cloneNode(true));
-  });
 
   function hasTemplateElement(){
     return typeof HTMLTemplateElement != 'undefined';
@@ -26,41 +22,93 @@
     return 'content' in template;
   };
 
-  if(!hasContent()) {
-    var style = document.createElement('style');
-    style.textContent = 'template { display: none; }';
-    document.head.appendChild(style);
+  if(hasContent()) { return; }
 
-    HTMLTemplateElement = function(){
-      throw new TypeError('Illegal constructor');
-    };
+  var style = document.createElement('style');
+  style.textContent = 'template { display: none; }';
+  document.head.appendChild(style);
 
-    HTMLTemplateElement.prototype = Object.create(HTMLElement.prototype);
+  HTMLTemplateElement = function(){
+    throw new TypeError('Illegal constructor');
+  };
 
-    // Create inert document to host template's document fragments
-    HTMLTemplateElement.prototype._templateHostDocument = document.implementation.createHTMLDocument();
+  HTMLTemplateElement.prototype = Object.create(HTMLElement.prototype);
 
-    HTMLTemplateElement.prototype._createContentFragment = function(){
-      this._contentFragment = this._templateHostDocument.createDocumentFragment();
-      while(this.firstChild) {
-        this._contentFragment.appendChild(this.removeChild(this.firstChild));
-      }
-    };
+  // Create inert document to host template's document fragments
+  HTMLTemplateElement.prototype._templateHostDocument = document.implementation.createHTMLDocument();
 
-    Object.defineProperty(HTMLTemplateElement.prototype, 'content', {
-      get: function(){
-        if(!this._contentFragment) {
-          this._createContentFragment();
-        };
-        return this._contentFragment;
-      }
+  HTMLTemplateElement.prototype._createContentFragment = function(){
+    this._contentFragment = this._templateHostDocument.createDocumentFragment();
+    while(this.firstChild) {
+      this._contentFragment.appendChild(this.removeChild(this.firstChild));
+    }
+  };
+
+  Object.defineProperty(HTMLTemplateElement.prototype, 'content', {
+    get: function(){
+      if(!this._contentFragment) {
+        this._createContentFragment();
+      };
+      return this._contentFragment;
+    }
+  });
+
+  each.call(document.querySelectorAll('template'), polyfillTemplate);
+
+  function polyfillTemplate(template){
+    template.__proto__ = HTMLTemplateElement.prototype;
+    template._createContentFragment();
+  };
+
+  function childListCallback(mutations){
+    each.call(mutations, function(mx){
+      if(mx.addedNodes) {
+        each.call(mx.addedNodes, function(node) {
+          if(node.tagName && node.tagName == 'TEMPLATE') {
+            polyfillTemplate(node);
+          }
+        });
+      };
     });
+  };
 
-    each.call(document.querySelectorAll('template'), function(template){
-      template.__proto__ = HTMLTemplateElement.prototype;
-    });
-  }
+  new MutationObserver(childListCallback).observe(document, { subtree: true, childList: true });
 })();
+</script>
+
+<script>
+window.addEventListener('DOMContentLoaded', function(){
+  var template = document.querySelector('template');
+  var article = document.querySelector('article');
+
+  var tests = {
+    staticTemplate: function() {
+      article.appendChild(template.content.cloneNode(true));
+      if(article.innerHTML.trim() !== '<p>Hello, world!</p>') {
+        throw new Error('static template failed');
+      }
+    },
+
+    dynamicTemplate: function() {
+      var template2 = document.createElement('template');
+      template2.innerHTML = '<p>Dynamic template</p>';
+      document.body.appendChild(template2);
+
+      article.innerHTML = '';
+      setTimeout(function(){
+        article.appendChild(template2.content.cloneNode(true));
+        if(article.innerHTML.trim() !== '<p>Dynamic template</p>') {
+          throw new Error('dynamic template failed');
+        }
+      }, 1);
+    }
+  };
+
+  Object.getOwnPropertyNames(tests).forEach(function(name) {
+    tests[name]();
+    article.innerHTML = '';
+  })
+});
 </script>
 </body>
 </html>
