@@ -1,112 +1,48 @@
 <html>
 <head>
+<title>HTML Template Element polyfill test</title>
+<script src="html-template-polyfill.js"></script>
 </head>
+
 <body>
-<template>
-  <p>Hello, world!</p>
+<h1>HTML Template Element Polyfill</h1>
+<template id="static">
+  <output class="static">static template OK</output>
 </template>
 
-<article>
-</article>
+<div id="output">
+</div>
 
-<script>
-(function(){
-  var each = Array.prototype.forEach;
-
-  function hasTemplateElement(){
-    return typeof HTMLTemplateElement != 'undefined';
-  };
-
-  function hasContent(){
-    var template = document.createElement('template');
-    return 'content' in template;
-  };
-
-  if(hasContent()) { return; }
-
-  var style = document.createElement('style');
-  style.textContent = 'template { display: none; }';
-  document.head.appendChild(style);
-
-  HTMLTemplateElement = function(){
-    throw new TypeError('Illegal constructor');
-  };
-
-  HTMLTemplateElement.prototype = Object.create(HTMLElement.prototype);
-
-  // Create inert document to host template's document fragments
-  HTMLTemplateElement.prototype._templateHostDocument = document.implementation.createHTMLDocument();
-
-  HTMLTemplateElement.prototype._createContentFragment = function(){
-    this._contentFragment = this._templateHostDocument.createDocumentFragment();
-    while(this.firstChild) {
-      this._contentFragment.appendChild(this.removeChild(this.firstChild));
-    }
-  };
-
-  Object.defineProperty(HTMLTemplateElement.prototype, 'content', {
-    get: function(){
-      if(!this._contentFragment) {
-        this._createContentFragment();
-      };
-      return this._contentFragment;
-    }
-  });
-
-  each.call(document.querySelectorAll('template'), polyfillTemplate);
-
-  function polyfillTemplate(template){
-    template.__proto__ = HTMLTemplateElement.prototype;
-    template._createContentFragment();
-  };
-
-  function childListCallback(mutations){
-    each.call(mutations, function(mx){
-      if(mx.addedNodes) {
-        each.call(mx.addedNodes, function(node) {
-          if(node.tagName && node.tagName == 'TEMPLATE') {
-            polyfillTemplate(node);
-          }
-        });
-      };
-    });
-  };
-
-  new MutationObserver(childListCallback).observe(document, { subtree: true, childList: true });
-})();
-</script>
-
+<p>This polyfill is intended to enable template.content properti in Safari.</p>
 <script>
 window.addEventListener('DOMContentLoaded', function(){
-  var template = document.querySelector('template');
-  var article = document.querySelector('article');
+  var staticTemplate = document.querySelector('template');
+  var output = document.querySelector('#output');
 
   var tests = {
     staticTemplate: function() {
-      article.appendChild(template.content.cloneNode(true));
-      if(article.innerHTML.trim() !== '<p>Hello, world!</p>') {
-        throw new Error('static template failed');
+      output.appendChild(staticTemplate.content.cloneNode(true));
+      if(!output.querySelector('.static')) {
+        output.appendChild('static template FAILURE');
       }
     },
 
     dynamicTemplate: function() {
-      var template2 = document.createElement('template');
-      template2.innerHTML = '<p>Dynamic template</p>';
-      document.body.appendChild(template2);
+      var dynamicTemplate = document.createElement('template');
+      dynamicTemplate.innerHTML = '<output class="dynamic">dynamic template OK</output>';
+      document.body.appendChild(dynamicTemplate);
 
-      article.innerHTML = '';
-      setTimeout(function(){
-        article.appendChild(template2.content.cloneNode(true));
-        if(article.innerHTML.trim() !== '<p>Dynamic template</p>') {
-          throw new Error('dynamic template failed');
+      window.requestAnimationFrame(function(){
+        output.appendChild(dynamicTemplate.content.cloneNode(true));
+        if(!output.querySelector('.dynamic')) {
+          output.appendChild('dynamic template FAILURE');
         }
-      }, 1);
+      });
     }
   };
 
   Object.getOwnPropertyNames(tests).forEach(function(name) {
     tests[name]();
-    article.innerHTML = '';
   })
 });
 </script>
