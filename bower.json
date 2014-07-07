@@ -1,0 +1,11 @@
+{
+  "name": "html-template-polyfill",
+  "version": "0.2.1",
+  "homepage": "https://github.com/Versal/html-template-polyfill",
+  "authors": [
+    "Andrey Mereskin <mereskin@gmail.com>"
+  ],
+  "description": "HTMLTemplateElement.prototype.content polyfill",
+  "main": "html-template-polyfill.js",
+  "license": "MIT"
+}
